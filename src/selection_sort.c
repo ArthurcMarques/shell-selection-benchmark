@@ -101,8 +101,8 @@ static int salvar_txt(const char *diretorio, const size_t *tamanhos, size_t quan
     fprintf(f, "Selection Sort - resultados\nEntradas: %s\n", diretorio);
     
     fprintf(f, "Tempo medido somente durante a ordenacao.\n\n");
-    fprintf(f, "Teste   Entrada       |  Elementos |        Tempo (s) | Validacao\n");
-    fprintf(f, "-------- --------------+------------+------------------+----------\n");
+    fprintf(f, "Teste    Entrada       |  Elementos |        Tempo (s) | Validacao\n");
+    fprintf(f, "--------- -------------+------------+------------------+----------\n");
     for (size_t t = 0; t < quantidade; ++t)
         for (size_t c = 0; c < casos; ++c) {
             size_t i = t * casos + c;
@@ -179,16 +179,18 @@ int main(int argc, char **argv) {
         printf("\nSelection Sort - bateria de %zu testes\n", total);
         printf("Entradas: %s\n", diretorio);
         puts("Tempo medido somente durante a ordenacao.\n");
-        puts("Teste   Entrada       |  Elementos |        Tempo (s) | Validacao");
-        puts("-------- --------------+------------+------------------+----------");
+        puts("Teste    Entrada       |  Elementos |        Tempo (s) | Validacao");
+        puts("--------- -------------+------------+------------------+----------");
     }
     for (size_t t = 0; t < sizeof tamanhos / sizeof tamanhos[0]; ++t) {
         for (size_t c = 0; c < sizeof tipos / sizeof tipos[0]; ++c) {
             char arquivo[4096];
             snprintf(arquivo, sizeof arquivo, "%s/%s_%zu.txt", diretorio, tipos[c], tamanhos[t]);
             size_t indice = t * (sizeof tipos / sizeof tipos[0]) + c;
-            fprintf(saida_csv ? stderr : stdout, "Executando [%02zu/%02zu]: %s, %zu elementos\n", indice + 1, total, tipos[c], tamanhos[t]);
-            fflush(saida_csv ? stderr : stdout);
+            if (saida_csv) {
+                fprintf(stderr, "Executando [%02zu/%02zu]: %s, %zu elementos\n", indice + 1, total, tipos[c], tamanhos[t]);
+                fflush(stderr);
+            }
             int status = executar(arquivo, tamanhos[t], tipos[c], &tempos[t * (sizeof tipos / sizeof tipos[0]) + c]);
             if (status) return status;
             if (!saida_csv) printf("[%02zu/%02zu] %-13s | %10zu | %16.9f | OK\n",

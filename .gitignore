@@ -2,3 +2,6 @@
 /gerador
 /shell
 /selection
+
+# Entradas geradas, incluindo src/output/testes/
+testes/

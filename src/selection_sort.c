@@ -54,8 +54,7 @@ static int executar(const char *arquivo, size_t n, const char *tipo, double *tem
     int *v = malloc(n * sizeof *v);
     if (!v) { perror("malloc"); return 1; }
     if (!carregar(arquivo, n, v)) { free(v); return 1; }
-    if (saida_csv) fprintf(stderr, "Executando selection: %s, %zu elementos\n", tipo, n);
-    else { printf("%-13s | %10zu | ", tipo, n); fflush(stdout); }
+
     struct timespec inicio, fim;
     if (clock_gettime(CLOCK_MONOTONIC, &inicio)) { perror("clock_gettime"); free(v); return 1; }
     selection_sort(v, n);
@@ -66,7 +65,7 @@ static int executar(const char *arquivo, size_t n, const char *tipo, double *tem
     *tempo = segundos(inicio, fim);
     if (saida_csv)
     printf("selection,%s,%zu,%s,%.9f,OK\n", tipo, n, "na", segundos(inicio, fim));
-    else printf("%16.9f | OK\n", segundos(inicio, fim));
+
     free(v);
     return 0;
 }
@@ -187,9 +186,13 @@ int main(int argc, char **argv) {
         for (size_t c = 0; c < sizeof tipos / sizeof tipos[0]; ++c) {
             char arquivo[4096];
             snprintf(arquivo, sizeof arquivo, "%s/%s_%zu.txt", diretorio, tipos[c], tamanhos[t]);
-            if (!saida_csv) printf("[%02zu/%02zu] ", t * (sizeof tipos / sizeof tipos[0]) + c + 1, total);
+            size_t indice = t * (sizeof tipos / sizeof tipos[0]) + c;
+            fprintf(saida_csv ? stderr : stdout, "Executando [%02zu/%02zu]: %s, %zu elementos\n", indice + 1, total, tipos[c], tamanhos[t]);
+            fflush(saida_csv ? stderr : stdout);
             int status = executar(arquivo, tamanhos[t], tipos[c], &tempos[t * (sizeof tipos / sizeof tipos[0]) + c]);
             if (status) return status;
+            if (!saida_csv) printf("[%02zu/%02zu] %-13s | %10zu | %16.9f | OK\n",
+                                   indice + 1, total, tipos[c], tamanhos[t], tempos[indice]);
         }
     }
     if (!saida_csv) printf("\nConcluido: %zu/%zu testes. Todos os vetores foram ordenados corretamente.\n", total, total);

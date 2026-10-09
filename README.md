@@ -95,3 +95,6 @@ Essa execucao simultanea serve para acompanhar o funcionamento. Para comparar te
 O terminal e o TXT registram inicio e fim com data, horario e deslocamento UTC, alem da duracao total medida por relogio monotonico desde a entrada em `main` ate a escrita da tabela TXT. Inclui preparacao, leitura, ordenacoes e validacoes; exclui o fechamento do relatorio. O tempo de cada ordenacao continua separado. No modo CSV, o resumo aparece em stderr para preservar as colunas. Localmente os horarios seguem o fuso do sistema; no Compose, `TZ=BRT3` configura UTC-03:00.
 
 O gerador tambem localiza a raiz do projeto ao executar em `src/output`, salvando em `../../testes`. Para escolher outra pasta, passe seu caminho como primeiro argumento: `.\gerador.exe caminho_da_pasta`. O resumo informa a quantidade real de arquivos gerados.
+
+## CSV automatico
+Ao concluir a bateria, os programas salvam CSV e TXT em `resultados/`: `selection.csv` e `shell_metades.csv` (ou a sequencia escolhida). Funciona tambem no Compose, sem redirecionamento. `--csv` apenas muda a saida do terminal. Cada execucao substitui os arquivos correspondentes.

@@ -108,6 +108,19 @@ static int salvar_txt(const char *diretorio, const size_t *tamanhos, size_t quan
     int criado = mkdir(pasta, 0777);
 #endif
     if (criado != 0 && errno != EEXIST) { perror(pasta); return 1; }
+    char caminho_csv[4096];
+    len = snprintf(caminho_csv, sizeof caminho_csv, "%s/shell_%s.csv", pasta, gap);
+    if (len < 0 || (size_t)len >= sizeof caminho_csv) { fprintf(stderr, "Caminho CSV muito longo\n"); return 1; }
+    FILE *csv = fopen(caminho_csv, "w");
+    if (!csv) { perror(caminho_csv); return 1; }
+    fprintf(csv, "algoritmo,tipo,n,sequencia,segundos_ordenacao,validacao\n");
+    for (size_t t = 0; t < quantidade; ++t)
+        for (size_t c = 0; c < casos; ++c)
+            fprintf(csv, "shell,%s,%zu,%s,%.9f,OK\n", tipos[c], tamanhos[t], gap, tempos[t * casos + c]);
+    int erro_csv = ferror(csv);
+    if (fclose(csv) != 0) erro_csv = 1;
+    if (erro_csv) { fprintf(stderr, "Erro ao salvar CSV: %s\n", caminho_csv); return 1; }
+
     len = snprintf(caminho, sizeof caminho, "%s/shell_%s.txt", pasta, gap);
     if (len < 0 || (size_t)len >= sizeof caminho) { fprintf(stderr, "Caminho de resultados muito longo\n"); return 1; }
     FILE *f = fopen(caminho, "w");
@@ -131,12 +144,13 @@ static int salvar_txt(const char *diretorio, const size_t *tamanhos, size_t quan
     formatar_horario(time(NULL), fim_texto, sizeof fim_texto);
     double duracao = segundos(inicio_programa, fim_programa);
     fprintf(f, "\nInicio: %s\nFim: %s\nTempo total do programa: %.6f segundos\n", inicio_texto, fim_texto, duracao);
-    fprintf(f, "Inclui preparacao, leitura, ordenacao, validacao e escrita da tabela TXT; exclui o fechamento do relatorio.\n");
+    fprintf(f, "Inclui preparacao, leitura, ordenacao, validacao e escrita do CSV e da tabela TXT; exclui o fechamento do relatorio.\n");
     int erro = ferror(f);
     if (fclose(f) != 0) erro = 1;
     if (erro) { fprintf(stderr, "Erro ao salvar relatorio: %s\n", caminho); return 1; }
     fprintf(saida_csv ? stderr : stdout, "\nInicio: %s\nFim: %s\nTempo total do programa: %.6f segundos\n", inicio_texto, fim_texto, duracao);
     fprintf(saida_csv ? stderr : stdout, "Relatorio TXT salvo em: %s\n", caminho);
+    fprintf(saida_csv ? stderr : stdout, "Relatorio CSV salvo em: %s\n", caminho_csv);
     return 0;
 }
 

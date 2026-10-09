@@ -1,0 +1,27 @@
+services:
+  shell:
+    build: .
+    image: trabalho-ordenacao:local
+    entrypoint: ["shell"]
+    command: ["/dados/testes"]
+    volumes:
+      - ./testes:/dados/testes:ro
+      - ./resultados:/dados/resultados
+    environment:
+      TZ: BRT3
+    cpus: 1.0
+    mem_limit: 512m
+
+  selection:
+    build: .
+    image: trabalho-ordenacao:local
+    entrypoint: ["selection"]
+    command: ["/dados/testes"]
+    volumes:
+      - ./testes:/dados/testes:ro
+      - ./resultados:/dados/resultados
+    environment:
+      TZ: BRT3
+    cpus: 1.0
+    mem_limit: 512m
+

@@ -1,0 +1,44 @@
+Shell Sort - resultados
+Entradas: /dados/testes
+Sequencia de gaps: metades
+Tempo medido somente durante a ordenacao.
+
+Teste   Entrada       |  Elementos |        Tempo (s) | Validacao
+-------- --------------+------------+------------------+----------
+[01/30] aleatorio     |         10 |      0.000001956 | OK
+[02/30] crescente     |         10 |      0.000000913 | OK
+[03/30] decrescente   |         10 |      0.000001709 | OK
+[04/30] aleatorio     |        100 |      0.000011985 | OK
+[05/30] crescente     |        100 |      0.000002439 | OK
+[06/30] decrescente   |        100 |      0.000005605 | OK
+[07/30] aleatorio     |       1000 |      0.000113130 | OK
+[08/30] crescente     |       1000 |      0.000033662 | OK
+[09/30] decrescente   |       1000 |      0.000060798 | OK
+[10/30] aleatorio     |       5000 |      0.001512535 | OK
+[11/30] crescente     |       5000 |      0.000220204 | OK
+[12/30] decrescente   |       5000 |      0.000375661 | OK
+[13/30] aleatorio     |      10000 |      0.002369157 | OK
+[14/30] crescente     |      10000 |      0.000479092 | OK
+[15/30] decrescente   |      10000 |      0.000441118 | OK
+[16/30] aleatorio     |      50000 |      0.017355769 | OK
+[17/30] crescente     |      50000 |      0.001784291 | OK
+[18/30] decrescente   |      50000 |      0.001702701 | OK
+[19/30] aleatorio     |     100000 |      0.023942883 | OK
+[20/30] crescente     |     100000 |      0.003024158 | OK
+[21/30] decrescente   |     100000 |      0.005137118 | OK
+[22/30] aleatorio     |     500000 |      0.137500513 | OK
+[23/30] crescente     |     500000 |      0.019719873 | OK
+[24/30] decrescente   |     500000 |      0.028325813 | OK
+[25/30] aleatorio     |    1000000 |      0.326739649 | OK
+[26/30] crescente     |    1000000 |      0.034759113 | OK
+[27/30] decrescente   |    1000000 |      0.044115099 | OK
+[28/30] aleatorio     |   10000000 |      4.222970319 | OK
+[29/30] crescente     |   10000000 |      0.422415677 | OK
+[30/30] decrescente   |   10000000 |      0.610059884 | OK
+
+Concluido: 30/30 testes. Todos os vetores foram ordenados corretamente.
+
+Inicio: 2026-10-08 18:55:33 -0300
+Fim: 2026-10-08 18:57:58 -0300
+Tempo total do programa: 144.063512 segundos
+Inclui preparacao, leitura, ordenacao, validacao e escrita da tabela TXT; exclui o fechamento do relatorio.

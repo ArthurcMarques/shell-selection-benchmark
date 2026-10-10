@@ -5,3 +5,7 @@
 
 # Entradas geradas, incluindo src/output/testes/
 testes/
+
+# Relatorios gerados (mantem a pasta no repositorio)
+/resultados/*
+!/resultados/.gitkeep

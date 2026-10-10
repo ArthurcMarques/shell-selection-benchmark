@@ -98,3 +98,11 @@ O gerador tambem localiza a raiz do projeto ao executar em `src/output`, salvand
 
 ## CSV automatico
 Ao concluir a bateria, os programas salvam CSV e TXT em `resultados/`: `selection.csv` e `shell_metades.csv` (ou a sequencia escolhida). Funciona tambem no Compose, sem redirecionamento. `--csv` apenas muda a saida do terminal. Cada execucao substitui os arquivos correspondentes.
+
+## Contadores nos programas C
+Cada teste registra `comparacoes` (comparacoes entre valores durante a ordenacao) e `movimentacoes` (escritas em posicoes do vetor). Uma troca no Selection conta duas movimentacoes; copiar um valor para variavel temporaria nao conta. No Shell, cada deslocamento e a escrita final contam uma movimentacao, mesmo quando o valor e reescrito na mesma posicao. Leitura, validacao e controle dos lacos nao contam. Os contadores sao zerados a cada teste e usam `unsigned long long`. O tempo de ordenacao inclui o custo da contagem, portanto nao deve ser comparado diretamente com execucoes anteriores sem contadores.
+
+Na bateria executada pelos programas C, CSV e TXT sao abertos no inicio (sobrescrevendo a execucao anterior) e cada resultado e gravado imediatamente, sem buffer. Uma interrupcao mantem os testes ja concluidos. O resumo final e escrito somente ao terminar a bateria; falhas de teste deixam uma indicacao de bateria interrompida no TXT.
+
+## Tres variacoes na bateria C
+Sem indicar gaps, o executavel `shell` executa metades, Knuth e Ciura em sequencia, recarregando as entradas em cada teste. Cada variacao tem CSV/TXT proprio em `resultados/`, gravado incrementalmente e sobrescrito na proxima execucao. O resumo de horarios e duracao refere-se a cada variacao. Execute `docker compose up -d --build shell` ou, localmente, `./shell testes`. Para apenas uma variacao, use `./shell testes knuth`. A saida `--csv` tem um unico cabecalho para todas as variacoes.

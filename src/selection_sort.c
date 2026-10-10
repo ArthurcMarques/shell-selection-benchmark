@@ -10,9 +10,34 @@
 #include <direct.h>
 #endif
 
+/* Guarda os dados de um teste juntos. */
+typedef struct {
+    double tempo;
+    unsigned long long comparacoes;
+    unsigned long long movimentacoes;
+} Resultado;
+
 static int saida_csv = 0;
+static unsigned long long comparacoes = 0;
+static unsigned long long movimentacoes = 0;
 static struct timespec inicio_programa;
 static time_t horario_inicio;
+
+static void imprimir_cabecalho(FILE *saida) {
+    fprintf(saida, "Teste    Entrada       |  Elementos |        Tempo (s) |      Comparacoes |    Movimentacoes | Validacao\n--------- -------------+------------+------------------+------------------+------------------+----------\n");
+}
+
+static void imprimir_linha(FILE *saida, size_t teste, size_t total,
+                          const char *tipo, size_t n, const Resultado *r) {
+    fprintf(saida, "[%02zu/%02zu] %-13s | %10zu | %16.9f | %16llu | %16llu | OK\n",
+            teste, total, tipo, n, r->tempo, r->comparacoes, r->movimentacoes);
+}
+
+static void imprimir_csv(FILE *saida, const char *tipo, size_t n,
+                        const char *gap, const Resultado *r) {
+    fprintf(saida, "selection,%s,%zu,%s,%.9f,%llu,%llu,OK\n",
+            tipo, n, gap, r->tempo, r->comparacoes, r->movimentacoes);
+}
 
 static void formatar_horario(time_t horario, char *texto, size_t tamanho) {
     struct tm *local = localtime(&horario);
@@ -26,10 +51,13 @@ static double segundos(struct timespec a, struct timespec b) {
 static void selection_sort(int *v, size_t n) {
     for (size_t i = 0; i + 1 < n; ++i) {
         size_t menor = i;
-        for (size_t j = i + 1; j < n; ++j)
+        for (size_t j = i + 1; j < n; ++j) {
+            comparacoes++;
             if (v[j] < v[menor]) menor = j;
+        }
         if (menor != i) {
             int tmp = v[i]; v[i] = v[menor]; v[menor] = tmp;
+            movimentacoes += 2;
         }
     }
 }
@@ -50,11 +78,17 @@ static int carregar(const char *arquivo, size_t n, int *v) {
     if (fclose(f)) { perror("fclose"); return 0; }
     return 1;
 }
-static int executar(const char *arquivo, size_t n, const char *tipo, double *tempo) {
+static int executar(const char *arquivo, size_t n, const char *tipo, Resultado *resultado) {
+    if (n == 0 || n > SIZE_MAX / sizeof(int)) {
+        fprintf(stderr, "Quantidade invalida\n");
+        return 1;
+    }
     int *v = malloc(n * sizeof *v);
     if (!v) { perror("malloc"); return 1; }
     if (!carregar(arquivo, n, v)) { free(v); return 1; }
 
+    comparacoes = 0;
+    movimentacoes = 0;
     struct timespec inicio, fim;
     if (clock_gettime(CLOCK_MONOTONIC, &inicio)) { perror("clock_gettime"); free(v); return 1; }
     selection_sort(v, n);
@@ -62,16 +96,17 @@ static int executar(const char *arquivo, size_t n, const char *tipo, double *tem
     for (size_t i = 1; i < n; ++i) {
         if (v[i-1] > v[i]) { fprintf(stderr, "Falha de ordenacao no indice %zu\n", i); free(v); return 1; }
     }
-    *tempo = segundos(inicio, fim);
-    if (saida_csv)
-    printf("selection,%s,%zu,%s,%.9f,OK\n", tipo, n, "na", segundos(inicio, fim));
+    resultado->tempo = segundos(inicio, fim);
+    resultado->comparacoes = comparacoes;
+    resultado->movimentacoes = movimentacoes;
+    if (saida_csv) imprimir_csv(stdout, tipo, n, "na", resultado);
 
     free(v);
     return 0;
 }
 
-static int salvar_txt(const char *diretorio, const size_t *tamanhos, size_t quantidade,
-                      const char **tipos, size_t casos, const double *tempos) {
+static int iniciar_relatorios(const char *diretorio, FILE **arquivo_csv,
+                              FILE **arquivo_txt) {
     char pasta[4096], caminho[4096];
     int len = snprintf(pasta, sizeof pasta, "%s/../resultados", diretorio);
     if (len < 0 || (size_t)len >= sizeof pasta) { fprintf(stderr, "Caminho de resultados muito longo\n"); return 1; }
@@ -86,44 +121,42 @@ static int salvar_txt(const char *diretorio, const size_t *tamanhos, size_t quan
     if (len < 0 || (size_t)len >= sizeof caminho_csv) { fprintf(stderr, "Caminho CSV muito longo\n"); return 1; }
     FILE *csv = fopen(caminho_csv, "w");
     if (!csv) { perror(caminho_csv); return 1; }
-    fprintf(csv, "algoritmo,tipo,n,sequencia,segundos_ordenacao,validacao\n");
-    for (size_t t = 0; t < quantidade; ++t)
-        for (size_t c = 0; c < casos; ++c)
-            fprintf(csv, "selection,%s,%zu,%s,%.9f,OK\n", tipos[c], tamanhos[t], "na", tempos[t * casos + c]);
-    int erro_csv = ferror(csv);
-    if (fclose(csv) != 0) erro_csv = 1;
-    if (erro_csv) { fprintf(stderr, "Erro ao salvar CSV: %s\n", caminho_csv); return 1; }
-
+    setvbuf(csv, NULL, _IONBF, 0);
+    fprintf(csv, "algoritmo,tipo,n,sequencia,segundos_ordenacao,comparacoes,movimentacoes,validacao\n");
     len = snprintf(caminho, sizeof caminho, "%s/selection.txt", pasta);
-    if (len < 0 || (size_t)len >= sizeof caminho) { fprintf(stderr, "Caminho de resultados muito longo\n"); return 1; }
+    if (len < 0 || (size_t)len >= sizeof caminho) { fprintf(stderr, "Caminho de resultados muito longo\n"); fclose(csv); return 1; }
     FILE *f = fopen(caminho, "w");
-    if (!f) { perror(caminho); return 1; }
+    if (!f) { perror(caminho); fclose(csv); return 1; }
+    setvbuf(f, NULL, _IONBF, 0);
     fprintf(f, "Selection Sort - resultados\nEntradas: %s\n", diretorio);
     
     fprintf(f, "Tempo medido somente durante a ordenacao.\n\n");
-    fprintf(f, "Teste    Entrada       |  Elementos |        Tempo (s) | Validacao\n");
-    fprintf(f, "--------- -------------+------------+------------------+----------\n");
-    for (size_t t = 0; t < quantidade; ++t)
-        for (size_t c = 0; c < casos; ++c) {
-            size_t i = t * casos + c;
-            fprintf(f, "[%02zu/%02zu] %-13s | %10zu | %16.9f | OK\n",
-                    i + 1, quantidade * casos, tipos[c], tamanhos[t], tempos[i]);
-        }
-    fprintf(f, "\nConcluido: %zu/%zu testes. Todos os vetores foram ordenados corretamente.\n", quantidade * casos, quantidade * casos);
+    imprimir_cabecalho(f);
+    *arquivo_csv = csv;
+    *arquivo_txt = f;
+    if (ferror(csv) || ferror(f)) {
+        fprintf(stderr, "Erro ao iniciar relatorios\n");
+        fclose(csv); fclose(f); return 1;
+    }
+    fprintf(saida_csv ? stderr : stdout, "Relatorios: %s e %s\n", caminho_csv, caminho);
+    return 0;
+}
+
+static int finalizar_relatorios(FILE *csv, FILE *f, size_t total) {
+    fprintf(f, "\nConcluido: %zu/%zu testes. Todos os vetores foram ordenados corretamente.\n", total, total);
     struct timespec fim_programa;
-    if (clock_gettime(CLOCK_MONOTONIC, &fim_programa)) { perror("clock_gettime"); fclose(f); return 1; }
+    if (clock_gettime(CLOCK_MONOTONIC, &fim_programa)) { perror("clock_gettime"); fclose(csv); fclose(f); return 1; }
     char inicio_texto[64], fim_texto[64];
     formatar_horario(horario_inicio, inicio_texto, sizeof inicio_texto);
     formatar_horario(time(NULL), fim_texto, sizeof fim_texto);
     double duracao = segundos(inicio_programa, fim_programa);
     fprintf(f, "\nInicio: %s\nFim: %s\nTempo total do programa: %.6f segundos\n", inicio_texto, fim_texto, duracao);
     fprintf(f, "Inclui preparacao, leitura, ordenacao, validacao e escrita do CSV e da tabela TXT; exclui o fechamento do relatorio.\n");
-    int erro = ferror(f);
+    int erro = ferror(f) || ferror(csv);
+    if (fclose(csv) != 0) erro = 1;
     if (fclose(f) != 0) erro = 1;
-    if (erro) { fprintf(stderr, "Erro ao salvar relatorio: %s\n", caminho); return 1; }
+    if (erro) { fprintf(stderr, "Erro ao salvar relatorios\n"); return 1; }
     fprintf(saida_csv ? stderr : stdout, "\nInicio: %s\nFim: %s\nTempo total do programa: %.6f segundos\n", inicio_texto, fim_texto, duracao);
-    fprintf(saida_csv ? stderr : stdout, "Relatorio TXT salvo em: %s\n", caminho);
-    fprintf(saida_csv ? stderr : stdout, "Relatorio CSV salvo em: %s\n", caminho_csv);
     return 0;
 }
 
@@ -173,14 +206,15 @@ int main(int argc, char **argv) {
     formatar_horario(horario_inicio, inicio_texto, sizeof inicio_texto);
     fprintf(saida_csv ? stderr : stdout, "Inicio: %s\n", inicio_texto);
     const size_t total = (sizeof tamanhos / sizeof tamanhos[0]) * (sizeof tipos / sizeof tipos[0]);
-    double tempos[sizeof tamanhos / sizeof tamanhos[0] * (sizeof tipos / sizeof tipos[0])];
-    if (saida_csv) puts("algoritmo,tipo,n,sequencia,segundos_ordenacao,validacao");
+    Resultado resultado;
+    FILE *csv, *txt;
+    if (iniciar_relatorios(diretorio, &csv, &txt)) return 1;
+    if (saida_csv) puts("algoritmo,tipo,n,sequencia,segundos_ordenacao,comparacoes,movimentacoes,validacao");
     else {
         printf("\nSelection Sort - bateria de %zu testes\n", total);
         printf("Entradas: %s\n", diretorio);
         puts("Tempo medido somente durante a ordenacao.\n");
-        puts("Teste    Entrada       |  Elementos |        Tempo (s) | Validacao");
-        puts("--------- -------------+------------+------------------+----------");
+        imprimir_cabecalho(stdout);
     }
     for (size_t t = 0; t < sizeof tamanhos / sizeof tamanhos[0]; ++t) {
         for (size_t c = 0; c < sizeof tipos / sizeof tipos[0]; ++c) {
@@ -191,13 +225,21 @@ int main(int argc, char **argv) {
                 fprintf(stderr, "Executando [%02zu/%02zu]: %s, %zu elementos\n", indice + 1, total, tipos[c], tamanhos[t]);
                 fflush(stderr);
             }
-            int status = executar(arquivo, tamanhos[t], tipos[c], &tempos[t * (sizeof tipos / sizeof tipos[0]) + c]);
-            if (status) return status;
-            if (!saida_csv) printf("[%02zu/%02zu] %-13s | %10zu | %16.9f | OK\n",
-                                   indice + 1, total, tipos[c], tamanhos[t], tempos[indice]);
+            int status = executar(arquivo, tamanhos[t], tipos[c], &resultado);
+            if (status) {
+                fprintf(txt, "\nBateria interrompida apos %zu testes concluidos; teste atual falhou.\n", indice);
+                fclose(csv); fclose(txt); return status;
+            }
+            imprimir_csv(csv, tipos[c], tamanhos[t], "na", &resultado);
+            imprimir_linha(txt, indice + 1, total, tipos[c], tamanhos[t], &resultado);
+            if (ferror(csv) || ferror(txt)) {
+                fprintf(stderr, "Erro ao gravar resultado\n");
+                fclose(csv); fclose(txt); return 1;
+            }
+            if (!saida_csv) imprimir_linha(stdout, indice + 1, total, tipos[c],
+                                           tamanhos[t], &resultado);
         }
     }
     if (!saida_csv) printf("\nConcluido: %zu/%zu testes. Todos os vetores foram ordenados corretamente.\n", total, total);
-    return salvar_txt(diretorio, tamanhos, sizeof tamanhos / sizeof tamanhos[0],
-                      tipos, sizeof tipos / sizeof tipos[0], tempos);
+    return finalizar_relatorios(csv, txt, total);
 }
